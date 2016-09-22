@@ -18,8 +18,9 @@ def main():
     # loop variables
     lastState = 0
     t = time.time()
-    pulseperiod = 0
+    pulseperiod = 2
     gate = 0
+    multiplicity = 2
 
     # main poll loop
     try:
@@ -36,15 +37,23 @@ def main():
                 if state == 1:
                     now = time.time()
                     pulseperiod = now - t
-                    gate = pulseperiod - pulsewidth
+                    # gate = pulseperiod / multiplicity - pulsewidth * multiplicity
                     t = now
-                    print('set output')
-                    GPIO.output(ochannel, 1)
 
             # check for gate time overflow
-            if (time.time() - t > gate) and GPIO.input(ochannel):
-                print('+{}s: reset output'.format(t / poll_freq))
-                GPIO.output(ochannel, 0)
+            dt = time.time() - t
+            subdiv = int(dt / pulseperiod * multiplicity)
+            gate_next = pulseperiod / multiplicity * (subdiv + 1)
+
+            if dt < gate_next - pulsewidth:
+                if GPIO.input(ochannel) == 0:
+                    print('gate on', subdiv)
+                    GPIO.output(ochannel, 1)
+
+            else:
+                if GPIO.input(ochannel) == 1:
+                    print('gate off', subdiv)
+                    GPIO.output(ochannel, 0)
 
             # wait in darkness
             time.sleep(1/poll_freq)
@@ -54,6 +63,7 @@ def main():
 
     # cleanup after yourself
     finally:
+        GPIO.output(ochannel, 0)
         GPIO.cleanup()
 
 if __name__ == "__main__":
