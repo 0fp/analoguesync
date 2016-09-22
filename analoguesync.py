@@ -10,20 +10,28 @@ def main():
     poll_freq = 500.
     pulsewidth = 10 / 1000.
 
+    # GPIO Setup
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(ochannel, GPIO.OUT)
 
+    # loop variables
     lastState = 0
     t = time.time()
     pulseperiod = 0
+    gate = 0
+
+    # main poll loop
     while True:
-        GPIO
+        # get sync signal state
         state = GPIO.input(ichannel)
 
+        # detect edge
         if state != lastState:
             lastState = state
             print('+{}s: state is now {}'.format(pulseperiod, state))
+
+            # switch slave output, update sync parameters
             if state == 1:
                 now = time.time()
                 pulseperiod = now - t
@@ -32,10 +40,12 @@ def main():
                 print('set output')
                 GPIO.output(ochannel, 1)
 
+        # check for gate time overflow
         if (time.time() - t > gate) and GPIO.input(ochannel):
             print('+{}s: reset output'.format(t / poll_freq))
             GPIO.output(ochannel, 0)
 
+        # wait in darkness
         time.sleep(1/poll_freq)
 
     GPIO.cleanup()
