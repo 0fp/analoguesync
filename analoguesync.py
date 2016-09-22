@@ -22,33 +22,39 @@ def main():
     gate = 0
 
     # main poll loop
-    while True:
-        # get sync signal state
-        state = GPIO.input(ichannel)
+    try:
+        while True:
+            # get sync signal state
+            state = GPIO.input(ichannel)
 
-        # detect edge
-        if state != lastState:
-            lastState = state
-            print('+{}s: state is now {}'.format(pulseperiod, state))
+            # detect edge
+            if state != lastState:
+                lastState = state
+                print('+{}s: state is now {}'.format(pulseperiod, state))
 
-            # switch slave output, update sync parameters
-            if state == 1:
-                now = time.time()
-                pulseperiod = now - t
-                gate = pulseperiod - pulsewidth
-                t = now
-                print('set output')
-                GPIO.output(ochannel, 1)
+                # switch slave output, update sync parameters
+                if state == 1:
+                    now = time.time()
+                    pulseperiod = now - t
+                    gate = pulseperiod - pulsewidth
+                    t = now
+                    print('set output')
+                    GPIO.output(ochannel, 1)
 
-        # check for gate time overflow
-        if (time.time() - t > gate) and GPIO.input(ochannel):
-            print('+{}s: reset output'.format(t / poll_freq))
-            GPIO.output(ochannel, 0)
+            # check for gate time overflow
+            if (time.time() - t > gate) and GPIO.input(ochannel):
+                print('+{}s: reset output'.format(t / poll_freq))
+                GPIO.output(ochannel, 0)
 
-        # wait in darkness
-        time.sleep(1/poll_freq)
+            # wait in darkness
+            time.sleep(1/poll_freq)
 
-    GPIO.cleanup()
+    except KeyboardInterrupt:
+        pass
+
+    # cleanup after yourself
+    finally:
+        GPIO.cleanup()
 
 if __name__ == "__main__":
     main()
