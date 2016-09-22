@@ -6,6 +6,8 @@ import time
 
 def main():
     channel = 22
+    poll_freq = 500.
+
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(channel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
@@ -16,8 +18,9 @@ def main():
         state = GPIO.input(channel)
         if state != lastState:
             lastState = state
-            print('{} state is now {}'.format(t, state))
-        time.sleep(0.001)
+            print('+{}s: state is now {}'.format(t / poll_freq, state))
+            t = 0
+        time.sleep(1/poll_freq)
         t += 1
 
 if __name__ == "__main__":
