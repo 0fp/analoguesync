@@ -7,9 +7,10 @@ import time
 GPIO.setmode(GPIO.BCM)
 
 class LFO():
-    cycle_length = 1
+    cycle_length = 2.
     t0 = 0
     min_pw = 10 / 1000.
+    multiplier = 2
 
     def __init__(self):
         self.t0 = time.time()
@@ -17,7 +18,13 @@ class LFO():
 
     def state(self):
         dt = time.time() - self.t0
-        if dt < self.cycle_length - self.min_pw:
+        sub_dt = dt
+        cycle_length = self.cycle_length / self.multiplier
+
+        while sub_dt > cycle_length:
+            sub_dt -= cycle_length
+
+        if sub_dt < cycle_length - self.min_pw:
             return 1
         else:
             return 0
@@ -33,8 +40,6 @@ def main():
 
     # loop variables
     cycle_length = 2.
-    multiplicity = 2
-    pulsewidth = 10 / 1000.
     lfo = LFO()
 
     # main poll loop
