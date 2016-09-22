@@ -17,33 +17,25 @@ def main():
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     # loop variables
-    lastState = 0
     cycle_length = 2.
     multiplicity = 2
     pulsewidth = 10 / 1000.
 
     # main poll loop
     try:
-        GPIO.wait_for_edge(ichannel, GPIO.RISING)
         t = time.time()
+        GPIO.wait_for_edge(ichannel, GPIO.RISING)
+
         while True:
-            # get sync signal state
-            state = GPIO.input(ichannel)
-
-            # detect edge
-            if state != lastState:
-                lastState = state
-                print('+{}s: state is now {}'.format(cycle_length, state))
-
-                # switch slave output, update sync parameters
-                if state == 1:
-                    now = time.time()
-                    cycle_length = now - t
-                    t = now
-                    freq = 1. / cycle_length * multiplicity
-                    print('BPM %i' % (100*freq))
-                    p.ChangeFrequency( freq )
-                    p.start(99)
+            GPIO.wait_for_edge(ichannel, GPIO.RISING)
+            now = time.time()
+            cycle_length = now - t
+            t = now
+            freq = 1. / cycle_length
+            dc = 1 - pulsewidth / cycle_length
+            print('BPM %i' % (100*freq))
+            p.ChangeFrequency( freq * multiplicity )
+            p.start(100 * dc)
 
     except KeyboardInterrupt:
         pass
