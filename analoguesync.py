@@ -27,11 +27,11 @@ def main():
             if state == 1:
                 now = time.time()
                 pulseperiod = now - t
+                gate = pulseperiod - pulsewidth
                 t = now
                 print('set output')
                 GPIO.output(ochannel, 1)
 
-        gate = pulseperiod - pulsewidth
         if (time.time() - t > gate) and GPIO.input(ochannel):
             print('+{}s: reset output'.format(t / poll_freq))
             GPIO.output(ochannel, 0)
