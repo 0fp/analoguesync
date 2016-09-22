@@ -10,7 +10,9 @@ class LFO():
     cycle_length = 2.
     t0 = 0
     min_pw = 10 / 1000.
-    multiplier = 2
+    multiplier = -2
+    c0 = 0
+    c1 = 0
 
     def __init__(self):
         self.t0 = time.time()
@@ -18,6 +20,33 @@ class LFO():
 
     def state(self):
         dt = time.time() - self.t0
+
+        if self.multiplier < 1:
+
+            if self.c1 == - self.multiplier:
+                if dt < self.min_pw:
+                    if self.c0 == 0:
+                        self.c1 = 0
+                        return 1
+
+                if dt < self.cycle_length - self.min_pw:
+                    return 1
+
+                if self.c0 == self.c1:
+                    self.c0 = 0
+                    return 0
+
+                if self.c0 == 0:
+                    return 0
+
+            if self.c0 == self.c1:
+                if dt < self.min_pw:
+                    self.c0 += 1
+            else:
+                if dt > self.min_pw:
+                    self.c1 += 1
+            return 1
+
         sub_dt = dt
         cycle_length = self.cycle_length / self.multiplier
 
