@@ -72,6 +72,7 @@ def main():
 
     # loop variables
     cycle_length = 2.
+    master_muliplier = 2
     lfo = LFO(lambda: GPIO.output(ochannel, 1),
               lambda: GPIO.output(ochannel, 0))
 
@@ -85,7 +86,10 @@ def main():
 
             if GPIO.event_detected(ichannel):
                 now = time.time()
-                cycle_length = now - t
+                if master_muliplier > 0:
+                    cycle_length = (now - t) / master_muliplier
+                if master_muliplier < 0:
+                    cycle_length = (now - t) * (-master_muliplier)
                 t = now
                 print('BPM %i' % (100 / cycle_length))
 
