@@ -73,7 +73,7 @@ def mkclick():
 click = mkclick()
 
 def main():
-    poll_freq = 500.
+    poll_freq = 10
 
     # GPIO Setup
     ochannel = 27
@@ -87,27 +87,29 @@ def main():
     lfo = LFO(lambda: GPIO.output(ochannel, 1),
               lambda: GPIO.output(ochannel, 0))
 
+    t = 0
+    def set_cycle(_):
+        nonlocal t
+        now = time.time()
+        if master_muliplier > 0:
+            cycle_length = (now - t) / master_muliplier
+        if master_muliplier < 0:
+            cycle_length = (now - t) * (-master_muliplier)
+        t = now
+
+        print('BPM %i' % (100 / cycle_length))
+
+        lfo.set_cycle(cycle_length)
+
+        click()
+
     # main poll loop
     try:
         GPIO.wait_for_edge(ichannel, GPIO.RISING)
         t = time.time()
-        GPIO.add_event_detect(ichannel, GPIO.RISING)
+        GPIO.add_event_detect(ichannel, GPIO.RISING, set_cycle)
 
         while True:
-
-            if GPIO.event_detected(ichannel):
-                now = time.time()
-                if master_muliplier > 0:
-                    cycle_length = (now - t) / master_muliplier
-                if master_muliplier < 0:
-                    cycle_length = (now - t) * (-master_muliplier)
-                t = now
-                print('BPM %i' % (100 / cycle_length))
-
-                lfo.set_cycle(cycle_length)
-
-                click()
-
             time.sleep(1/poll_freq)
 
     except KeyboardInterrupt:
