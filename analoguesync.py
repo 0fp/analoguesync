@@ -29,40 +29,30 @@ class LFO():
 
     def set_cycle(self, cycle_length):
 
-        self.cycle_length = cycle_length
-
         dt = time.time() - self.t0
-        cl = self.cycle_length * self.multiplier
+        cl = cycle_length * self.multiplier
+
         self.cl = cl
 
+        gateoff = self.cl - self.min_pw
+
         if abs(self.multiplier) == 1:
-            # always reset for new cycle_length
-            self.t_rise.cancel()
-            gateoff = cl - self.min_pw
-            print('-', gateoff,dt, cycle_length)
-            self._rise()
-            self.t_fall.cancel()
-            self.t_fall = Timer(gateoff, self.fall)
-            self.t_fall.start()
+            self.t0 = time.time()
 
         if self.multiplier > 1:
-
-            gateoff = cl - self.min_pw - dt
-            if gateoff < 3 * self.min_pw:
+            if dt > cl - self.min_pw:
                 self.t0 = time.time()
-                dt = 0
-                gateoff = cl - self.min_pw
-            self.t_rise.cancel()
-            self._rise()
+            else:
+                gateoff -= dt
 
-            print('-', gateoff,dt, cycle_length)
-            self.t_fall.cancel()
-            self.t_fall = Timer(gateoff, self.fall)
-            self.t_fall.start()
+        self.t_rise.cancel()
+        self.rise()
+
+        print('-', gateoff,dt, cycle_length)
 
     def rise(self):
-        self.t0 = time.time()
-        gateoff = self.cl - self.min_pw
+        dt = time.time() - self.t0
+        gateoff = self.cl - self.min_pw - dt
         print('rise')
         self._rise()
         self.t_fall.cancel()
@@ -75,6 +65,7 @@ class LFO():
         self.t_rise.cancel()
         self.t_rise = Timer(self.min_pw, self.rise)
         self.t_rise.start()
+        self.t0 = time.time()
 
 def _click():
     count = 0
