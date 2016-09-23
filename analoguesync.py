@@ -58,19 +58,17 @@ class LFO():
         self.t_rise = Timer(self.min_pw, self.rise)
         self.t_rise.start()
 
-def mkclick():
-    measure = 0
+def _click():
+    count = 0
     def _():
-        nonlocal measure
-        print(measure)
-        if measure == 0:
+        nonlocal count
+        print(count)
+        if count == 0:
             Popen(['aplay', '-q', 'clav02.wav'])
-        elif measure % 2 == 0:
+        elif count:
             Popen(['aplay', '-q', 'clav01.wav'])
-        measure = (measure + 1) % 8
+        count = (count + 1) % 4
     return _
-
-click = mkclick()
 
 def main():
     poll_freq = 10
@@ -87,6 +85,9 @@ def main():
     lfo = LFO(lambda: GPIO.output(ochannel, 1),
               lambda: GPIO.output(ochannel, 0))
 
+    click = LFO(_click(), lambda: True)
+    click.multiplier = 4
+
     t = 0
     def set_cycle(_):
         nonlocal t
@@ -100,8 +101,7 @@ def main():
         print('BPM %i' % (100 / cycle_length))
 
         lfo.set_cycle(cycle_length)
-
-        click()
+        click.set_cycle(cycle_length)
 
     # main poll loop
     try:
