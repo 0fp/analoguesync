@@ -3,6 +3,7 @@
 
 import RPi.GPIO as GPIO
 import time
+from subprocess import Popen
 
 GPIO.setmode(GPIO.BCM)
 
@@ -58,6 +59,20 @@ class LFO():
         else:
             return 0
 
+def mkclick():
+    measure = 0
+    def _():
+        nonlocal measure
+        print(measure)
+        if measure == 0:
+            Popen(['aplay', '-q', 'clav02.wav'])
+        elif measure % 2 == 0:
+            Popen(['aplay', '-q', 'clav01.wav'])
+        measure = (measure + 1) % 8
+    return _
+
+click = mkclick()
+
 def main():
     poll_freq = 500.
 
@@ -87,6 +102,8 @@ def main():
 
                 lfo.t0 = now
                 lfo.cycle_length = cycle_length
+
+                click()
 
             if GPIO.input(ochannel) != lfo.state():
                 GPIO.output(ochannel, lfo.state())
