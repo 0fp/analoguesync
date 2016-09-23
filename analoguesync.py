@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3.4
 #coding: utf8
 
 import RPi.GPIO as GPIO
@@ -101,5 +101,5 @@ def main():
         GPIO.output(ochannel, 0)
         GPIO.cleanup()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
