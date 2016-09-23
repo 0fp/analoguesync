@@ -4,60 +4,48 @@
 import RPi.GPIO as GPIO
 import time
 from subprocess import Popen
+from threading import Timer
 
 GPIO.setmode(GPIO.BCM)
 
 class LFO():
     cycle_length = 2.
-    t0 = 0
     min_pw = 10 / 1000.
-    multiplier = -2
-    c0 = 0
-    c1 = 0
+    multiplier = 1
+    pulse = 0
 
-    def __init__(self):
-        self.t0 = time.time()
-        pass
+    def __init__(self, rise, fall):
+        self._rise = rise
+        self._fall = fall
 
-    def state(self):
-        dt = time.time() - self.t0
+        self.t_fall = Timer(0, fall)
 
-        if self.multiplier < 1:
+    def __del__(self):
+        self.t_fall.cancel()
 
-            if self.c1 == - self.multiplier:
-                if dt < self.min_pw:
-                    if self.c0 == 0:
-                        self.c1 = 0
-                        return 1
+    def set_cycle(self, cycle_length):
+        if self.multiplier == 0:
+            return
 
-                if dt < self.cycle_length - self.min_pw:
-                    return 1
+        # start of cycle
+        if self.pulse == 0:
+            self.rise()
 
-                if self.c0 == self.c1:
-                    self.c0 = 0
-                    return 0
+        # register estimated end of cycle
+        t = (self.multiplier - self.pulse) * cycle_length - self.min_pw
+        self.t_fall.cancel()
+        self.t_fall = Timer(t, self.fall)
+        self.t_fall.start()
 
-                if self.c0 == 0:
-                    return 0
+        self.pulse += 1
 
-            if self.c0 == self.c1:
-                if dt < self.min_pw:
-                    self.c0 += 1
-            else:
-                if dt > self.min_pw:
-                    self.c1 += 1
-            return 1
+    def rise(self):
+        self._rise()
 
-        sub_dt = dt
-        cycle_length = self.cycle_length / self.multiplier
-
-        while sub_dt > cycle_length:
-            sub_dt -= cycle_length
-
-        if sub_dt < cycle_length - self.min_pw:
-            return 1
-        else:
-            return 0
+    def fall(self):
+        self._fall()
+        if self.pulse == self.multiplier:
+            self.pulse = 0
 
 def mkclick():
     measure = 0
@@ -84,7 +72,8 @@ def main():
 
     # loop variables
     cycle_length = 2.
-    lfo = LFO()
+    lfo = LFO(lambda: GPIO.output(ochannel, 1),
+              lambda: GPIO.output(ochannel, 0))
 
     # main poll loop
     try:
@@ -100,13 +89,9 @@ def main():
                 t = now
                 print('BPM %i' % (100 / cycle_length))
 
-                lfo.t0 = now
-                lfo.cycle_length = cycle_length
+                lfo.set_cycle(cycle_length)
 
                 click()
-
-            if GPIO.input(ochannel) != lfo.state():
-                GPIO.output(ochannel, lfo.state())
 
             time.sleep(1/poll_freq)
 
