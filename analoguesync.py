@@ -21,39 +21,57 @@ class LFO():
         self.t_rise = Timer(0, self.rise)
         self.t_fall = Timer(0, self.fall)
 
+        self.t0 = time.time()
+
     def __del__(self):
+        self.t_rise.cancel()
         self.t_fall.cancel()
 
     def set_cycle(self, cycle_length):
 
         self.cycle_length = cycle_length
 
-        # always reset for new cycle_length
-        self.t_rise.cancel()
-        self.t_fall.cancel()
+        dt = time.time() - self.t0
+        cl = self.cycle_length * self.multiplier
+        self.cl = cl
 
-        if self.multiplier == 0:
-            return
+        if abs(self.multiplier) == 1:
+            # always reset for new cycle_length
+            self.t_rise.cancel()
+            gateoff = cl - self.min_pw
+            print('-', gateoff,dt, cycle_length)
+            self._rise()
+            self.t_fall.cancel()
+            self.t_fall = Timer(gateoff, self.fall)
+            self.t_fall.start()
 
-        # start of cycle
-        self.rise()
+        if self.multiplier > 1:
 
-    def rise(self):
-        if self.pulse == 0:
+            gateoff = cl - self.min_pw - dt
+            if gateoff < 3 * self.min_pw:
+                self.t0 = time.time()
+                dt = 0
+                gateoff = cl - self.min_pw
+            self.t_rise.cancel()
             self._rise()
 
-        # register estimated end of cycle
-        t = (self.multiplier - self.pulse) * self.cycle_length - self.min_pw
+            print('-', gateoff,dt, cycle_length)
+            self.t_fall.cancel()
+            self.t_fall = Timer(gateoff, self.fall)
+            self.t_fall.start()
+
+    def rise(self):
+        self.t0 = time.time()
+        gateoff = self.cl - self.min_pw
+        print('rise')
+        self._rise()
         self.t_fall.cancel()
-        self.t_fall = Timer(t, self.fall)
+        self.t_fall = Timer(gateoff, self.fall)
         self.t_fall.start()
 
-        self.pulse = (self.pulse + 1) % self.multiplier
-
     def fall(self):
+        print('fall')
         self._fall()
-
-        # register next start of cycle
         self.t_rise.cancel()
         self.t_rise = Timer(self.min_pw, self.rise)
         self.t_rise.start()
