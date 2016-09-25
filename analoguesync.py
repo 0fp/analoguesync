@@ -8,68 +8,28 @@ from threading import Timer
 
 GPIO.setmode(GPIO.BCM)
 
-class LFO():
-    cycle_length = 2.
-    min_pw = 10 / 1000.
-    multiplier = 1
-    pulse = 0
+def calculate_steps(lfos):
+    lfos.sort(key=lambda _:_.multiplier, reverse=True)
 
-    def __init__(self, rise, fall):
-        self._rise = rise
-        self._fall = fall
+    # m = abs(multiplier) ** sign(multiplier)
+    cycles = lfos[0].multiplier
+    if cycles < 1:
+        cycles = 1
 
-        self.t_rise = Timer(0, self.rise)
-        self.t_fall = Timer(0, self.fall)
+    flanks = []
+    for lfo in lfos:
+        m = abs(lfo.multiplier) ** (lfo.multiplier < 0 and -1 or 1)
+        steps = int(cycles / m)
+        print(steps)
+        for k in range(0, steps):
+            on  = (k / steps * cycles, lfo.channel, True)
+            off = ((k+0.1) / steps * cycles - 0.01, lfo.channel, False)
+            flanks += [on, off]
 
-        self.t0 = time.time()
 
-    def __del__(self):
-        self.t_rise.cancel()
-        self.t_fall.cancel()
-
-    def set_cycle(self, cycle_length):
-
-        if cycle_length < self.min_pw:
-            return
-
-        dt = time.time() - self.t0
-        cl = cycle_length * self.multiplier
-
-        gateoff = cl - self.min_pw
-        self.gateoff = gateoff
-
-        if abs(self.multiplier) == 1:
-            self.t0 = time.time()
-
-        if dt > gateoff:
-            self.t0 = time.time()
-        if dt < 4 * self.min_pw:
-            self.t0 += dt
-
-        self.t_rise.cancel()
-        self.rise()
-
-        print('-', gateoff,dt, cycle_length)
-
-    def rise(self):
-        dt = time.time() - self.t0
-        gateoff = self.gateoff - dt
-        if gateoff < 0:
-            gateoff = self.gateoff
-        print(gateoff)
-        print('rise')
-        self._rise()
-        self.t_fall.cancel()
-        self.t_fall = Timer(gateoff, self.fall)
-        self.t_fall.start()
-
-    def fall(self):
-        print('fall')
-        self._fall()
-        self.t_rise.cancel()
-        self.t_rise = Timer(self.min_pw, self.rise)
-        self.t_rise.start()
-        self.t0 = time.time()
+    flanks.sort(key=lambda _:_[0])
+    print(flanks)
+    return flanks
 
 def _click():
     count = 0
@@ -83,53 +43,59 @@ def _click():
         count = (count + 1) % 4
     return _
 
+class lfo():
+    multiplier = 0
+    channel = 0
+    def __init__(self, channel):
+        self.channel = channel
+
+    def __repr__(self):
+        return '({}, {})'.format(self.channel, self.multiplier)
+
 def main():
-    poll_freq = 10
 
     # GPIO Setup
-    ochannel = 27
-    GPIO.setup(ochannel, GPIO.OUT)
     ichannel = 22
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-    # loop variables
-    master_muliplier = 2
-    lfo = LFO(lambda: GPIO.output(ochannel, 1),
-              lambda: GPIO.output(ochannel, 0))
+    lfos = []
+    for channel in [17, 27]:
+        lfos.append(lfo(channel))
+        GPIO.setup(channel, GPIO.OUT)
 
-    click = LFO(_click(), lambda: True)
-    click.multiplier = 4
+    lfos[0].multiplier = -2
+    lfos[1].multiplier = 3
 
-    t = 0
-    def set_cycle(_):
-        nonlocal t
-        now = time.time()
-        if master_muliplier > 0:
-            cycle_length = (now - t) / master_muliplier
-        if master_muliplier < 0:
-            cycle_length = (now - t) * (-master_muliplier)
-        t = now
+    min_pulsewidth = 0.01
+    cycle_length = 0.7
+    sync_t = []
 
-        print('BPM %i' % (100 / cycle_length))
+    steps = calculate_steps(lfos)
 
-        lfo.set_cycle(cycle_length)
-        click.set_cycle(cycle_length)
+    GPIO.wait_for_edge(ichannel, GPIO.RISING)
+#    GPIO.add_event_detect(ichannel, GPIO.RISING, set_cycle)
 
-    # main poll loop
     try:
-        GPIO.wait_for_edge(ichannel, GPIO.RISING)
-        t = time.time()
-        GPIO.add_event_detect(ichannel, GPIO.RISING, set_cycle)
-
+        idx = 0
         while True:
-            time.sleep(1/poll_freq)
+            c = steps[idx][1]
+            v = steps[idx][2]
+            print(c, v)
+            GPIO.output(c, v)
+
+            next = (idx + 1) % len(steps)
+            dt = steps[next][0] - steps[idx][0]
+            dt = max(dt, 0)
+
+            time.sleep(dt * cycle_length)
+            idx = next
 
     except KeyboardInterrupt:
         pass
 
-    # cleanup after yourself
     finally:
-        GPIO.output(ochannel, 0)
+        for channel in [17, 27]:
+            GPIO.output(channel, 0)
         GPIO.cleanup()
 
 if __name__ == '__main__':
