@@ -9,10 +9,9 @@ from threading import Timer
 GPIO.setmode(GPIO.BCM)
 
 def calculate_steps(lfos):
-    lfos.sort(key=lambda _:_.multiplier, reverse=True)
 
     # m = abs(multiplier) ** sign(multiplier)
-    cycles = lfos[0].multiplier
+    cycles = max(lfos, key=lambda _: _.multiplier).multiplier
     if cycles < 1:
         cycles = 1
 
@@ -23,11 +22,11 @@ def calculate_steps(lfos):
         print(steps)
         for k in range(0, steps):
             on  = (k / steps * cycles, lfo.channel, True)
-            off = ((k+0.1) / steps * cycles - 0.01, lfo.channel, False)
+            off = ((k+1) / steps * cycles - 0.01, lfo.channel, False)
             flanks += [on, off]
 
 
-    flanks.sort(key=lambda _:_[0])
+    flanks.sort(key=lambda _ : _[0])
     print(flanks)
     return flanks
 
@@ -52,6 +51,22 @@ class lfo():
     def __repr__(self):
         return '({}, {})'.format(self.channel, self.multiplier)
 
+class Cycle():
+    last   = [0]
+    length = 1
+    drift  = 0
+
+    def sync(self, _=None):
+        last = self.last
+        last += [time.time()]
+
+        length = last[1] - last[0]
+        if length < 2:
+            self.drift  = self.length - length
+            self.length = length
+
+        self.last = last[1:]
+
 def main():
 
     # GPIO Setup
@@ -63,8 +78,8 @@ def main():
         lfos.append(lfo(channel))
         GPIO.setup(channel, GPIO.OUT)
 
-    lfos[0].multiplier = -2
-    lfos[1].multiplier = 3
+    lfos[0].multiplier = 4
+    lfos[1].multiplier = -4
 
     min_pulsewidth = 0.01
     cycle_length = 0.7
@@ -72,22 +87,36 @@ def main():
 
     steps = calculate_steps(lfos)
 
+    cycle = Cycle()
     GPIO.wait_for_edge(ichannel, GPIO.RISING)
-#    GPIO.add_event_detect(ichannel, GPIO.RISING, set_cycle)
+    cycle.sync()
+    GPIO.wait_for_edge(ichannel, GPIO.RISING)
+    cycle.sync()
+    GPIO.add_event_detect(ichannel, GPIO.RISING, cycle.sync)
 
+    cnt = 0
     try:
         idx = 0
         while True:
-            c = steps[idx][1]
-            v = steps[idx][2]
-            print(c, v)
-            GPIO.output(c, v)
 
             next = (idx + 1) % len(steps)
-            dt = steps[next][0] - steps[idx][0]
-            dt = max(dt, 0)
 
-            time.sleep(dt * cycle_length)
+            if idx == 0:
+                while True:
+                    time.sleep(0.002)
+                    if abs(time.time() - cycle.last[0]) < 0.002:
+                        break
+
+            c = steps[idx][1]
+            v = steps[idx][2]
+            GPIO.output(c, v)
+
+            if next == 0:
+                dx = int(steps[idx][0] + 1) - steps[idx][0]
+            dx = steps[next][0] - steps[idx][0]
+
+            _ = dx * cycle.length
+            time.sleep(max(_, 0))
             idx = next
 
     except KeyboardInterrupt:
