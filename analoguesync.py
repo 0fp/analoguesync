@@ -17,14 +17,17 @@ def calculate_steps(lfos):
 
     flanks = []
     for lfo in lfos:
+        if lfo.multiplier == 0:
+            continue
+
         m = abs(lfo.multiplier) ** (lfo.multiplier < 0 and -1 or 1)
         steps = int(cycles / m)
         print(steps)
         for k in range(0, steps):
-            on  = (k / steps * cycles, lfo.channel, True)
-            off = ((k+1) / steps * cycles - 0.01, lfo.channel, False)
-            flanks += [on, off]
-
+            if lfo.on:
+                flanks += [(k / steps * cycles, lfo.on)]
+            if lfo.off:
+                flanks += [((k + lfo.dc) / steps * cycles - 0.01, lfo.off)]
 
     flanks.sort(key=lambda _ : _[0])
     print(flanks)
@@ -34,22 +37,18 @@ def _click():
     count = 0
     def _():
         nonlocal count
-        print(count)
-        if count == 0:
-            Popen(['aplay', '-q', 'clav02.wav'])
-        elif count:
-            Popen(['aplay', '-q', 'clav01.wav'])
+        #click = 'clav02.wav' if count == 0 else 'clav01.wav'
+        click = ('clav02.wav', 'clav01.wav')[count==0]
+        Popen(['aplay', '-q', click])
         count = (count + 1) % 4
     return _
 
-class lfo():
-    multiplier = 0
-    channel = 0
-    def __init__(self, channel):
-        self.channel = channel
-
-    def __repr__(self):
-        return '({}, {})'.format(self.channel, self.multiplier)
+class LFO():
+    multiplier = 1
+    dc = 0.5
+    def __init__(self, on=None, off=None):
+        self.on  = on
+        self.off = off
 
 class Cycle():
     last   = [0]
@@ -75,11 +74,15 @@ def main():
 
     lfos = []
     for channel in [17, 27]:
-        lfos.append(lfo(channel))
+        def _(c, s):
+            return lambda: GPIO.output(c, s)
         GPIO.setup(channel, GPIO.OUT)
+        lfos.append(LFO( _(channel, 1), _(channel, 0)))
 
-    lfos[0].multiplier = 4
-    lfos[1].multiplier = -4
+    lfos[0].multiplier = 2
+    lfos[1].multiplier = 1
+
+    lfos += [LFO(_click())]
 
     min_pulsewidth = 0.01
     cycle_length = 0.7
@@ -107,9 +110,7 @@ def main():
                     if abs(time.time() - cycle.last[0]) < 0.002:
                         break
 
-            c = steps[idx][1]
-            v = steps[idx][2]
-            GPIO.output(c, v)
+            steps[idx][1]()
 
             if next == 0:
                 dx = int(steps[idx][0] + 1) - steps[idx][0]
