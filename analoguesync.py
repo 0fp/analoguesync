@@ -29,21 +29,22 @@ class LFO():
 
     def set_cycle(self, cycle_length):
 
+        if cycle_length < self.min_pw:
+            return
+
         dt = time.time() - self.t0
         cl = cycle_length * self.multiplier
 
-        self.cl = cl
-
-        gateoff = self.cl - self.min_pw
+        gateoff = cl - self.min_pw
+        self.gateoff = gateoff
 
         if abs(self.multiplier) == 1:
             self.t0 = time.time()
 
-        if self.multiplier > 1:
-            if dt > cl - self.min_pw:
-                self.t0 = time.time()
-            else:
-                gateoff -= dt
+        if dt > gateoff:
+            self.t0 = time.time()
+        if dt < 4 * self.min_pw:
+            self.t0 += dt
 
         self.t_rise.cancel()
         self.rise()
@@ -52,7 +53,10 @@ class LFO():
 
     def rise(self):
         dt = time.time() - self.t0
-        gateoff = self.cl - self.min_pw - dt
+        gateoff = self.gateoff - dt
+        if gateoff < 0:
+            gateoff = self.gateoff
+        print(gateoff)
         print('rise')
         self._rise()
         self.t_fall.cancel()
@@ -89,7 +93,6 @@ def main():
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     # loop variables
-    cycle_length = 2.
     master_muliplier = 2
     lfo = LFO(lambda: GPIO.output(ochannel, 1),
               lambda: GPIO.output(ochannel, 0))
