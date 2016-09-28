@@ -69,18 +69,20 @@ class Cycle():
 def main():
 
     # GPIO Setup
-    ichannel = 22
+    ichannel = 19
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     lfos = []
-    for channel in [17, 27]:
+    for channel in [26, 13, 6, 5]:
         def _(c, s):
             return lambda: GPIO.output(c, s)
         GPIO.setup(channel, GPIO.OUT)
         lfos.append(LFO( _(channel, 1), _(channel, 0)))
+        lfos[-1].dc = 0.1
 
-    lfos[0].multiplier = 2
-    lfos[1].multiplier = 1
+    lfos[1].dc = 0.8
+    lfos[2].multiplier = 2
+    lfos[3].multiplier = 4
 
     lfos += [LFO(_click())]
 
@@ -124,7 +126,7 @@ def main():
         pass
 
     finally:
-        for channel in [17, 27]:
+        for channel in [26, 13, 6, 5]:
             GPIO.output(channel, 0)
         GPIO.cleanup()
 
