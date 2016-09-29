@@ -20,6 +20,8 @@ def calculate_steps(lfos):
         if lfo.multiplier == 0:
             continue
 
+        print(lfo.multiplier)
+
         m = abs(lfo.multiplier) ** (lfo.multiplier < 0 and -1 or 1)
         steps = int(cycles / m)
         print(steps)
@@ -54,12 +56,15 @@ class LFO():
 
     def set_multiplier(self, multiplier):
         self.multiplier += multiplier
+        print('set multiplier %i' % self.multiplier)
 
     def set_dc(self, dc):
-        self.dc = min(1, max(0, dc + 0.1*dc))
+        self.dc = min(1, max(0, self.dc + 0.1*dc))
+        print('set dc %f' % self.dc)
 
     def set_phi(self, phi):
         self.phi = phi
+        print('set phi %i' % self.phi)
 
 class Cycle():
     last   = [0]
