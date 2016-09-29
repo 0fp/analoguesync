@@ -75,7 +75,8 @@ class Cycle():
     lfos = []
 
     def build(self):
-        self.steps = calculate_steps(self.lfos)
+        self.steps = [(0, self.vsync)]
+        self.steps += calculate_steps(self.lfos)
 
     def sync(self, _=None):
         print('.')
@@ -88,6 +89,13 @@ class Cycle():
             self.length = length
 
         self.last = last[1:]
+
+    def vsync(self):
+        print('-')
+        while True:
+            time.sleep(0.002)
+            if abs(time.time() - self.last[0]) < 0.002:
+                break
 
 
 class RotaryController():
@@ -214,8 +222,6 @@ def main():
     cycle_length = 0.7
     sync_t = []
 
-    #steps = calculate_steps(lfos)
-
     cycle = Cycle()
     cycle.lfos = lfos
     cycle.build()
@@ -233,12 +239,6 @@ def main():
         while True:
 
             next = (idx + 1) % len(cycle.steps)
-
-            if idx == 0:
-                while True:
-                    time.sleep(0.002)
-                    if abs(time.time() - cycle.last[0]) < 0.002:
-                        break
 
             cycle.steps[idx][1]()
 
