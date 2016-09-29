@@ -27,7 +27,7 @@ def calculate_steps(lfos):
             if lfo.on:
                 flanks += [(k / steps * cycles, lfo.on)]
             if lfo.off:
-                flanks += [((k + lfo.dc) / steps * cycles - 0.01, lfo.off)]
+                flanks += [((k + lfo.dc + 0.01) / steps * cycles - 0.01, lfo.off)]
 
     flanks.sort(key=lambda _ : _[0])
     print(flanks)
@@ -45,7 +45,9 @@ def _click():
 
 class LFO():
     multiplier = 1
-    dc = 0.5
+    dc         = 0.01
+    phi        = 0
+
     def __init__(self, on=None, off=None):
         self.on  = on
         self.off = off
