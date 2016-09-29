@@ -68,10 +68,14 @@ class Cycle():
 
         self.last = last[1:]
 
-class rotaryController():
+
+class RotaryController():
     last = 0
 
     def __init__(self, a, b, callback):
+        GPIO.setup([a, b], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(a, GPIO.BOTH, self.rot)
+
         self.a = a
         self.b = b
         self.callback = callback
@@ -94,10 +98,9 @@ def main():
     ichannel = 19
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-    cchannel = [9, 11]
-    GPIO.setup(cchannel, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    controller = rotaryController(9, 11, lambda _: print(_))
-    GPIO.add_event_detect(cchannel[0], GPIO.BOTH, controller.rot)
+    # cchannel = [9, 11]
+
+    rotC = RotaryController(9, 11, controller.input)
 
     lfos = []
     for channel in [26, 13, 6, 5]:
