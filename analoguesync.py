@@ -52,12 +52,28 @@ class LFO():
         self.on  = on
         self.off = off
 
+    def set_multiplier(self, multiplier):
+        self.multiplier += multiplier
+
+    def set_dc(self, dc):
+        self.dc = min(1, max(0, dc + 0.1*dc))
+
+    def set_phi(self, phi):
+        self.phi = phi
+
 class Cycle():
     last   = [0]
     length = 1
     drift  = 0
 
+    steps = []
+    lfos = []
+
+    def build(self):
+        self.steps = calculate_steps(self.lfos)
+
     def sync(self, _=None):
+        print('.')
         last = self.last
         last += [time.time()]
 
@@ -92,6 +108,73 @@ class RotaryController():
 
         self.last = state
 
+class Controller():
+    edit    = False
+    channel = 0
+    param   = None
+    plist   = ['mult', 'dc', 'phi']
+    controls = []
+    cycle = None
+
+    def __init__(self, indicator):
+        self.indicator = indicator
+        self.timer = Timer(0, lambda: None)
+        self.edit_t = Timer(0, lambda: None)
+
+    def _blink(self):
+        GPIO.output(self.indicator, 1)
+        self.timer = Timer(0.05, lambda: GPIO.output(self.indicator, 0))
+        self.timer.start()
+
+    def blink(self):
+        if not self.edit:
+            self._blink()
+
+    def channel_info(self):
+        for i in range(self.channel + 1):
+            self.timer = Timer(0.2 * i, self._blink)
+            self.timer.start()
+
+    def input(self, value):
+        switch_param = lambda: None
+        if not self.edit:
+            self.timer.cancel()
+            self.edit  = True
+            self.channel = -1
+
+        # edit timeout
+        def switch_param():
+            c = self.controls[self.channel]
+
+            if self.param is None:
+                self.param = 0
+            else:
+                self.param += 1
+
+            if self.param == len(c):
+                # reset
+                self.edit    = False
+                self.channel = 0
+                self.param   = None
+                return
+
+            self.channel_info()
+            print(self.channel)
+            self.edit_t = Timer(2, switch_param)
+            self.edit_t.start()
+
+        self.edit_t.cancel()
+        self.edit_t = Timer(2, switch_param)
+        self.edit_t.start()
+
+        if self.param is None:
+            self.channel = (self.channel + value) % 4
+            self.channel_info()
+            print('select channel %i' % self.channel)
+        else:
+            self.controls[self.channel][self.param](value)
+            self.cycle.build()
+
 def main():
 
     # GPIO Setup
@@ -99,30 +182,40 @@ def main():
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     # cchannel = [9, 11]
+    controller = Controller(26)
 
     rotC = RotaryController(9, 11, controller.input)
 
     lfos = []
-    for channel in [26, 13, 6, 5]:
+
+    GPIO.setup(26, GPIO.OUT)
+    lfos += [LFO(controller.blink)]
+
+    controls = []
+    ochannels = [13, 6, 5]
+    for channel in ochannels:
         def _(c, s):
             return lambda: GPIO.output(c, s)
         GPIO.setup(channel, GPIO.OUT)
-        lfos.append(LFO( _(channel, 1), _(channel, 0)))
-        lfos[-1].dc = 0.1
-
-    lfos[1].dc = 0.8
-    lfos[2].multiplier = 2
-    lfos[3].multiplier = 4
+        lfo = LFO( _(channel, 1), _(channel, 0))
+        lfos += [lfo]
+        controls += [(lfo.set_multiplier, lfo.set_dc, lfo.set_phi)]
 
     lfos += [LFO(_click())]
+
+    controller.controls = controls
 
     min_pulsewidth = 0.01
     cycle_length = 0.7
     sync_t = []
 
-    steps = calculate_steps(lfos)
+    #steps = calculate_steps(lfos)
 
     cycle = Cycle()
+    cycle.lfos = lfos
+    cycle.build()
+    controller.cycle = cycle
+
     GPIO.wait_for_edge(ichannel, GPIO.RISING)
     cycle.sync()
     GPIO.wait_for_edge(ichannel, GPIO.RISING)
@@ -134,7 +227,7 @@ def main():
         idx = 0
         while True:
 
-            next = (idx + 1) % len(steps)
+            next = (idx + 1) % len(cycle.steps)
 
             if idx == 0:
                 while True:
@@ -142,15 +235,15 @@ def main():
                     if abs(time.time() - cycle.last[0]) < 0.002:
                         break
 
-            steps[idx][1]()
+            cycle.steps[idx][1]()
 
             if next == 0:
-                dx = int(steps[idx][0] + 1) - steps[idx][0]
-            dx = steps[next][0] - steps[idx][0]
+                dx = int(cycle.steps[idx][0] + 1) - cycle.steps[idx][0]
+            dx = cycle.steps[next][0] - cycle.steps[idx][0]
 
             _ = dx * cycle.length
             time.sleep(max(_, 0))
-            idx = next
+            idx = next % len(cycle.steps)
 
     except KeyboardInterrupt:
         pass
