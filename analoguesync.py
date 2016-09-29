@@ -29,7 +29,8 @@ def calculate_steps(lfos):
             if lfo.on:
                 flanks += [(k / steps * cycles, lfo.on)]
             if lfo.off:
-                flanks += [((k + lfo.dc + 0.01) / steps * cycles - 0.01, lfo.off)]
+                gate = max(0.01, min(lfo.dc, 0.99))
+                flanks += [((k + gate) / steps * cycles, lfo.off)]
 
     flanks.sort(key=lambda _ : _[0])
     print(flanks)
