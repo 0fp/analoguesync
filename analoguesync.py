@@ -157,6 +157,10 @@ class Controller():
             self._blink()
 
     def channel_info(self):
+        if self.param is None:
+            print('c %i' % self.channel)
+        else:
+            print('c %i: %s' % (self.channel, self.plist[self.param]))
         for i in range(self.channel + 1):
             self.timer = Timer(0.2 * i, self._blink)
             self.timer.start()
@@ -166,7 +170,7 @@ class Controller():
         if not self.edit:
             self.timer.cancel()
             self.edit  = True
-            self.channel = -1
+            self.channel = 0
             return
 
         c = self.controls[self.channel]
@@ -184,8 +188,6 @@ class Controller():
             return
 
         self.channel_info()
-        print(self.channel)
-        print('set_mode')
 
     def input(self, value):
         if not self.edit and self.cycle.last[0] == 0:
@@ -197,7 +199,6 @@ class Controller():
         if self.param is None:
             self.channel = (self.channel + value) % 4
             self.channel_info()
-            print('select channel %i' % self.channel)
         else:
             self.controls[self.channel][self.param](value)
             self.cycle.build()
