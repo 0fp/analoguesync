@@ -69,7 +69,7 @@ class LFO():
 
 class Cycle():
     last   = [0]
-    length = 1
+    length = .5
     vlast  = 0
 
     steps = []
@@ -162,37 +162,38 @@ class Controller():
             self.timer = Timer(0.2 * i, self._blink)
             self.timer.start()
 
-    def input(self, value):
-        switch_param = lambda: None
+    def set_mode(self, _):
+
         if not self.edit:
             self.timer.cancel()
             self.edit  = True
             self.channel = -1
+            return
 
-        # edit timeout
-        def switch_param():
-            c = self.controls[self.channel]
+        c = self.controls[self.channel]
 
-            if self.param is None:
-                self.param = 0
-            else:
-                self.param += 1
+        if self.param is None:
+            self.param = 0
+        else:
+            self.param += 1
 
-            if self.param == len(c):
-                # reset
-                self.edit    = False
-                self.channel = 0
-                self.param   = None
-                return
+        if self.param == len(c):
+            # reset
+            self.edit    = False
+            self.channel = 0
+            self.param   = None
+            return
 
-            self.channel_info()
-            print(self.channel)
-            self.edit_t = Timer(2, switch_param)
-            self.edit_t.start()
+        self.channel_info()
+        print(self.channel)
+        print('set_mode')
 
-        self.edit_t.cancel()
-        self.edit_t = Timer(2, switch_param)
-        self.edit_t.start()
+    def input(self, value):
+        if not self.edit and self.cycle.last[0] == 0:
+            l = 1/(1/self.cycle.length + value/30.)
+            print('bpm %i' % int(1/l*60))
+            self.cycle.length = max(0.3, min(l, 2))
+            return
 
         if self.param is None:
             self.channel = (self.channel + value) % 4
@@ -210,6 +211,9 @@ def main():
 
     # cchannel = [9, 11]
     controller = Controller(26)
+
+    GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(10, GPIO.FALLING, controller.set_mode, 500)
 
     rotC = RotaryController(9, 11, controller.input)
 
@@ -241,10 +245,6 @@ def main():
     cycle.build()
     controller.cycle = cycle
 
-    GPIO.wait_for_edge(ichannel, GPIO.RISING)
-    cycle.sync()
-    GPIO.wait_for_edge(ichannel, GPIO.RISING)
-    cycle.sync()
     GPIO.add_event_detect(ichannel, GPIO.RISING, cycle.sync)
 
     cnt = 0
