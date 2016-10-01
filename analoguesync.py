@@ -20,20 +20,19 @@ def calculate_steps(lfos):
         if lfo.multiplier == 0:
             continue
 
-        print(lfo.multiplier)
-
         m = abs(lfo.multiplier) ** (lfo.multiplier < 0 and -1 or 1)
         steps = int(cycles / m)
-        print(steps)
         for k in range(0, steps):
             if lfo.on:
-                flanks += [(k / steps * cycles, lfo.on)]
+                t = (k + lfo.phi) / steps * cycles
+                flanks += [(t, lfo.on)]
             if lfo.off:
                 gate = max(0.01, min(lfo.dc, 0.99))
-                flanks += [((k + gate) / steps * cycles, lfo.off)]
+                t = (k + (lfo.phi + gate)%1) / steps * cycles
+                flanks += [(t, lfo.off)]
 
     flanks.sort(key=lambda _ : _[0])
-    print(flanks)
+    #print(flanks)
     return flanks
 
 def _click():
@@ -64,8 +63,8 @@ class LFO():
         print('set dc %f' % self.dc)
 
     def set_phi(self, phi):
-        self.phi = phi
-        print('set phi %i' % self.phi)
+        self.phi = max(0, min(self.phi + 0.1 * phi, .9))
+        print('set phi %f' % self.phi)
 
 class Cycle():
     last   = [0]
