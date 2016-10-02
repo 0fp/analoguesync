@@ -8,6 +8,9 @@ from threading import Timer
 
 GPIO.setmode(GPIO.BCM)
 
+def l2bpm(l):
+    return int(1/l*60)
+
 def calculate_steps(lfos):
 
     # m = abs(multiplier) ** sign(multiplier)
@@ -78,7 +81,6 @@ class Cycle():
         self.steps = calculate_steps([LFO(self.vsync)] + self.lfos)
 
     def sync(self, _=None):
-        print('.')
         last = self.last
         last += [time.time()]
 
@@ -92,7 +94,7 @@ class Cycle():
             self.length += dt
 
         self.last = last[1:]
-        print('r', self.length)
+        print('r', l2bpm(self.length))
 
     def vsync(self):
         print('-')
@@ -100,16 +102,14 @@ class Cycle():
         last = self.last[-1]
         dt = t - last
 
-        if dt > self.length:
-            return
+        if dt < self.length:
+            length = self.length - dt
+            if length > self.length/2:
+                self.length = length
 
-        length = self.length - dt
-        if length > self.length/2:
-            self.length = length
+            self.vlast = t
 
-        self.vlast = t
-
-        print('v', self.length)
+        print('v', l2bpm(self.length))
 
 class RotaryController():
     last = 0
@@ -190,10 +190,10 @@ class Controller():
         self.channel_info()
 
     def input(self, value):
-        if not self.edit and self.cycle.last[0] == 0:
-            l = 1/(1/self.cycle.length + value/30.)
-            print('bpm %i' % int(1/l*60))
-            self.cycle.length = max(0.3, min(l, 2))
+        if not self.edit:
+            if self.cycle.last[0] < time.time() - 5:
+                l = 1/(1/self.cycle.length + value/30.)
+                self.cycle.length = max(0.3, min(l, 2))
             return
 
         if self.param is None:
