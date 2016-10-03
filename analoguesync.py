@@ -9,7 +9,7 @@ from threading import Timer
 GPIO.setmode(GPIO.BCM)
 
 def l2bpm(l):
-    return int(1/l*60)
+    return int(1/l*60/2)
 
 def calculate_steps(lfos):
 
@@ -39,7 +39,7 @@ def calculate_steps(lfos):
     return flanks
 
 def _click():
-    count = 0
+    count = 1
     def _():
         nonlocal count
         #click = 'clav02.wav' if count == 0 else 'clav01.wav'
@@ -71,7 +71,7 @@ class LFO():
 
 class Cycle():
     last   = [0]
-    length = .5
+    length = .25
     vlast  = 0
 
     steps = []
@@ -173,6 +173,7 @@ class Controller():
             self.channel = 0
             return
 
+        print(self.channel)
         c = self.controls[self.channel]
 
         if self.param is None:
@@ -193,7 +194,7 @@ class Controller():
         if not self.edit:
             if self.cycle.last[0] < time.time() - 5:
                 l = 1/(1/self.cycle.length + value/30.)
-                self.cycle.length = max(0.3, min(l, 2))
+                self.cycle.length = max(0.2, min(l, 2))
             return
 
         if self.param is None:
@@ -221,6 +222,7 @@ def main():
 
     GPIO.setup(26, GPIO.OUT)
     lfos += [LFO(controller.blink)]
+    lfos[-1].multiplier = 2
 
     controls = []
     ochannels = [13, 6, 5]
@@ -232,7 +234,15 @@ def main():
         lfos += [lfo]
         controls += [(lfo.set_multiplier, lfo.set_dc, lfo.set_phi)]
 
+    lfos[-3].multiplier = 2
+    lfos[-3].dc         = 0.6
+    lfos[-3].phi        = 0.5
+    lfos[-2].multiplier = 4
+    lfos[-1].multiplier = 2
+
     lfos += [LFO(_click())]
+    lfos[-1].multiplier = 2
+    lfos[-1].phi = 0.9
 
     controller.controls = controls
 
