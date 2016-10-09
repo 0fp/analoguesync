@@ -9,7 +9,7 @@ from threading import Timer
 GPIO.setmode(GPIO.BCM)
 
 def l2bpm(l):
-    return int(1/l*60/2)
+    return int(1/l*60)
 
 def calculate_steps(lfos):
 
@@ -72,7 +72,7 @@ class LFO():
 
 class Cycle():
     last   = [0]
-    length = .25
+    length = .5
     vlast  = 0
 
     steps = []
@@ -193,7 +193,7 @@ class Controller():
     def input(self, value):
         if not self.edit:
             if self.cycle.last[0] < time.time() - 5:
-                l = 1/(1/self.cycle.length + 2 * value/30.)
+                l = 1/(1/self.cycle.length + 2 * value/60.)
                 self.cycle.length = max(0.15, min(l, 0.5))
                 print('BPM: %i' % l2bpm(self.cycle.length))
             return
