@@ -207,26 +207,28 @@ class Controller():
 def main():
 
     # GPIO Setup
-    ichannel = 19
+    ichannel   = 4
+    cIndicator = 6
+    cRotary    = [26, 19]
+    cButton    = 13
+    cOut       = [10, 9, 11, 5]
+
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    controller = Controller(cIndicator)
 
-    # cchannel = [9, 11]
-    controller = Controller(26)
+    GPIO.setup(cButton, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(cButton, GPIO.FALLING, controller.set_mode, 500)
 
-    GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(10, GPIO.FALLING, controller.set_mode, 500)
-
-    rotC = RotaryController(9, 11, controller.input)
+    rotC = RotaryController(cRotary[0], cRotary[1], controller.input)
 
     lfos = []
 
-    GPIO.setup(26, GPIO.OUT)
+    GPIO.setup(cIndicator, GPIO.OUT)
     lfos += [LFO(controller.blink)]
     lfos[-1].multiplier = 2
 
     controls = []
-    ochannels = [13, 6, 5]
-    for channel in ochannels:
+    for channel in cOut:
         def _(c, s):
             return lambda: GPIO.output(c, s)
         GPIO.setup(channel, GPIO.OUT)
@@ -235,10 +237,12 @@ def main():
         controls += [(lfo.set_multiplier, lfo.set_dc, lfo.set_phi)]
 
     lfos[-3].multiplier = 2
-    lfos[-3].dc         = 0.6
+    lfos[-3].dc         = 0
     lfos[-3].phi        = 0.5
     lfos[-2].multiplier = 4
+    lfos[-2].dc         = 0.9
     lfos[-1].multiplier = 2
+    lfos[-1].dc         = 0.9
 
     lfos += [LFO(_click())]
     lfos[-1].multiplier = 2
@@ -280,7 +284,7 @@ def main():
         pass
 
     finally:
-        for channel in [26, 13, 6, 5]:
+        for channel in cIndicator, cOut:
             GPIO.output(channel, 0)
         GPIO.cleanup()
 
