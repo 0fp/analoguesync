@@ -28,11 +28,11 @@ def calculate_steps(lfos):
         for k in range(0, steps):
             if lfo.on:
                 t = (k + lfo.phi) / steps * cycles
-                flanks += [(t, lfo.on)]
+                flanks += [(t, lfo.on if not lfo.inverted else lfo.off)]
             if lfo.off:
                 gate = max(0.01, min(lfo.dc, 0.99))
                 t = (k + (lfo.phi + gate)%1) / steps * cycles
-                flanks += [(t, lfo.off)]
+                flanks += [(t, lfo.off if not lfo.inverted else lfo.on)]
 
     flanks.sort(key=lambda _ : _[0])
     #print(flanks)
@@ -52,6 +52,7 @@ class LFO():
     multiplier = 1
     dc         = 0.01
     phi        = 0
+    inverted   = False
 
     def __init__(self, on=None, off=None):
         self.on  = on
@@ -240,9 +241,11 @@ def main():
     lfos[-3].dc         = 0
     lfos[-3].phi        = 0.5
     lfos[-2].multiplier = 4
-    lfos[-2].dc         = 0.9
+    lfos[-2].dc         = 0.1
+    lfos[-2].inverted   = True
     lfos[-1].multiplier = 2
-    lfos[-1].dc         = 0.9
+    lfos[-1].dc         = 0.1
+    lfos[-1].inverted   = True
 
     lfos += [LFO(_click())]
     lfos[-1].multiplier = 2
