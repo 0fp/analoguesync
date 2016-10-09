@@ -212,7 +212,7 @@ def main():
     cIndicator = 6
     cRotary    = [26, 19]
     cButton    = 13
-    cOut       = [10, 9, 11, 5]
+    cOut       = [22, 10, 9, 11, 5]
 
     GPIO.setup(ichannel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     controller = Controller(cIndicator)
@@ -222,11 +222,18 @@ def main():
 
     rotC = RotaryController(cRotary[0], cRotary[1], controller.input)
 
+    # LFOs
+    aux  = []
     lfos = []
 
+    # master indicator
     GPIO.setup(cIndicator, GPIO.OUT)
-    lfos += [LFO(controller.blink)]
-    lfos[-1].multiplier = 2
+    aux += [LFO(controller.blink)]
+    aux[-1].multiplier = 4
+
+    # click lfo
+    aux += [LFO(_click())]
+    aux[-1].phi = 0.9
 
     controls = []
     for channel in cOut:
@@ -237,28 +244,25 @@ def main():
         lfos += [lfo]
         controls += [(lfo.set_multiplier, lfo.set_dc, lfo.set_phi)]
 
-    lfos[-3].multiplier = 2
-    lfos[-3].dc         = 0
-    lfos[-3].phi        = 0.5
-    lfos[-2].multiplier = 4
-    lfos[-2].dc         = 0.1
-    lfos[-2].inverted   = True
-    lfos[-1].multiplier = 2
-    lfos[-1].dc         = 0.1
-    lfos[-1].inverted   = True
+    lfos[0].multiplier = -2
 
-    lfos += [LFO(_click())]
-    lfos[-1].multiplier = 2
-    lfos[-1].phi = 0.9
+    lfos[1].multiplier = 1
+
+    lfos[2].multiplier = 4
+
+    lfos[3].inverted   = True
+    lfos[3].multiplier = 4
+    lfos[3].dc         = 1.
+
+    lfos[4].inverted   = True
+    lfos[4].multiplier = 1
+    lfos[4].dc         = 0.5
+    lfos[4].phi        = 0.5
 
     controller.controls = controls
 
-    min_pulsewidth = 0.01
-    cycle_length = 0.7
-    sync_t = []
-
     cycle = Cycle()
-    cycle.lfos = lfos
+    cycle.lfos = lfos + aux
     cycle.build()
     controller.cycle = cycle
 
