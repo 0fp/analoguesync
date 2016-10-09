@@ -98,7 +98,6 @@ class Cycle():
         print('r', l2bpm(self.length))
 
     def vsync(self):
-        print('-')
         t = time.time()
         last = self.last[-1]
         dt = t - last
@@ -110,7 +109,7 @@ class Cycle():
 
             self.vlast = t
 
-        print('v', l2bpm(self.length))
+            print('v', l2bpm(self.length))
 
 class RotaryController():
     last = 0
@@ -194,8 +193,9 @@ class Controller():
     def input(self, value):
         if not self.edit:
             if self.cycle.last[0] < time.time() - 5:
-                l = 1/(1/self.cycle.length + value/30.)
-                self.cycle.length = max(0.2, min(l, 2))
+                l = 1/(1/self.cycle.length + 2 * value/30.)
+                self.cycle.length = max(0.15, min(l, 0.5))
+                print('BPM: %i' % l2bpm(self.cycle.length))
             return
 
         if self.param is None:
