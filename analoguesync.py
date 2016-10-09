@@ -127,7 +127,7 @@ class RotaryController():
         b = GPIO.input(self.b)
         state = (a ^ b) | b << 1
 
-        if self.last == 0 and state == 1:
+        if self.last == 3 and state == 1:
             self.callback( 1)
         if self.last == 0 and state == 2:
             self.callback(-1)
