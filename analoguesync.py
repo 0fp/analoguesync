@@ -11,6 +11,21 @@ GPIO.setmode(GPIO.BCM)
 def l2bpm(l):
     return int(1/l*60)
 
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+def lcm(a, b):
+    return a * b // gcd(a, b)
+
+def lcmm(*args):
+    r = 1
+    for _ in args:
+        r = lcm(r, _)
+    return r
+    #return reduce(lcm, args)
+
 def calculate_steps(lfos):
 
     # m = abs(multiplier) ** sign(multiplier)
