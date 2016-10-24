@@ -117,17 +117,50 @@ class Cycle():
 
     def vsync(self):
         t = time.time()
-        last = self.last[-1]
+        last = max(self.last[-1], self.vlast)
         dt = t - last
 
-        if dt < self.length:
-            length = self.length - dt
-            if length > self.length/2:
-                self.length = length
+        #if dt < self.length:
+        #    length = self.length - dt
+        #    if length > self.length/2:
+        #        self.length = length
+        #        print('adjust length')
+        #
+#
+#
+ #           print('v', l2bpm(self.length))
 
-            self.vlast = t
+        #if dt > self.length:
+        #    length = self.length
 
-            print('v', l2bpm(self.length))
+        offset = dt - self.length
+        self.offset += 0.2 * (offset if abs(offset) < 0.1 else 0)
+
+        print('%.4f %.4f %.4f %.4f' % (self.length, dt, self.offset, offset))
+
+        self.vlast = t
+
+    def run(self):
+        idx = 0
+        while not self.reset:
+
+            next = (idx + 1) % len(self.steps)
+
+            self.steps[idx][1]()
+
+            if next == 0:
+                dx = int(self.steps[idx][0] + 1) - self.steps[idx][0]
+            else:
+                dx = self.steps[next][0] - self.steps[idx][0]
+
+            _ = dx * (self.length - self.offset)
+            time.sleep(max(_, 0))
+            idx = next % len(self.steps)
+
+        self.build()
+        self.reset = False
+
+        self.run()
 
 class RotaryController():
     last = 0
@@ -221,7 +254,7 @@ class Controller():
             self.channel_info()
         else:
             self.controls[self.channel][self.param](value)
-            self.cycle.build()
+            self.cycle.reset = True
 
 def main():
 
@@ -288,22 +321,7 @@ def main():
 
     cnt = 0
     try:
-        idx = 0
-        while True:
-
-            next = (idx + 1) % len(cycle.steps)
-
-            #print(idx)
-            cycle.steps[idx][1]()
-
-            if next == 0:
-                dx = int(cycle.steps[idx][0] + 1) - cycle.steps[idx][0]
-            else:
-                dx = cycle.steps[next][0] - cycle.steps[idx][0]
-
-            _ = dx * cycle.length
-            time.sleep(max(_, 0))
-            idx = next % len(cycle.steps)
+        cycle.run()
 
     except KeyboardInterrupt:
         pass
