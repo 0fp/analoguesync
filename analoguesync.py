@@ -29,7 +29,8 @@ def lcmm(*args):
 def calculate_steps(lfos):
 
     # m = abs(multiplier) ** sign(multiplier)
-    cycles = max(lfos, key=lambda _: _.multiplier).multiplier
+    # cycles = max(lfos, key=lambda _: _.multiplier).multiplier
+    cycles = lcmm(*[_.multiplier for _ in lfos if _.multiplier > 1])
     if cycles < 1:
         cycles = 1
 
