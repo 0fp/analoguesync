@@ -216,7 +216,16 @@ class Controller():
             self.timer = Timer(0.2 * i, self._blink)
             self.timer.start()
 
-    def set_mode(self, _):
+    def set_mode(self, channel):
+        #c = GPIO.wait_for_edge(channel, GPIO.RISING, timeout=1000)
+        t = 0
+        while GPIO.input(channel) == 0 and t < 1:
+            time.sleep(0.1)
+            t += 0.1
+
+        if t >= 1:
+            cycle.reset = True
+            return
 
         if not self.edit:
             self.timer.cancel()
