@@ -66,7 +66,7 @@ def _click():
 
 class LFO():
     multiplier = 1
-    dc         = 0.01
+    dc         = 0.1
     phi        = 0
     inverted   = False
 
@@ -90,6 +90,8 @@ class Cycle():
     last   = [0]
     length = .5
     vlast  = 0
+    offset = 0
+    reset  = False
 
     steps = []
     lfos = []
