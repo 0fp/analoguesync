@@ -60,7 +60,7 @@ def _click():
         nonlocal count
         #click = 'clav02.wav' if count == 0 else 'clav01.wav'
         click = ('clav02.wav', 'clav01.wav')[count==0]
-        Popen(['aplay', '-q', click])
+        Popen(['aplay', '-q', '/home/ich/analoguesync/' + click])
         count = (count + 1) % 4
     return _
 
